@@ -20,6 +20,7 @@ import {
   ArrowForwardOutlined,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { t } from '../utils';
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -27,18 +28,18 @@ export const Home: React.FC = () => {
   const features = [
     {
       icon: <LocalShippingOutlined />,
-      title: 'Free Shipping',
-      description: 'Free shipping on orders over $50',
+      title: t('freeShipping'),
+      description: t('freeShippingDescription'),
     },
     {
       icon: <SecurityOutlined />,
-      title: 'Secure Payment',
-      description: '100% secure payment processing',
+      title: t('securePayment'),
+      description: t('securePaymentDescription'),
     },
     {
       icon: <SupportAgentOutlined />,
-      title: '24/7 Support',
-      description: 'Round the clock customer support',
+      title: t('support247'),
+      description: t('support247Description'),
     },
   ];
 
@@ -46,19 +47,19 @@ export const Home: React.FC = () => {
     {
       name: 'Sarah Johnson',
       rating: 5,
-      comment: 'Amazing products and fast delivery!',
+      comment: '¡Productos increíbles y entrega rápida!',
       avatar: 'SJ',
     },
     {
       name: 'Mike Chen',
       rating: 5,
-      comment: 'Great customer service and quality items.',
+      comment: 'Excelente servicio al cliente y artículos de calidad.',
       avatar: 'MC',
     },
     {
       name: 'Emma Davis',
       rating: 5,
-      comment: 'Love shopping here, highly recommend!',
+      comment: '¡Me encanta comprar aquí, altamente recomendado!',
       avatar: 'ED',
     },
   ];
@@ -87,7 +88,7 @@ export const Home: React.FC = () => {
                   mb: 3,
                 }}
               >
-                Welcome to Our Store
+                {t('welcomeToStore')}
               </Typography>
               <Typography
                 variant="h5"
@@ -98,8 +99,7 @@ export const Home: React.FC = () => {
                   fontSize: { xs: '1.1rem', md: '1.25rem' },
                 }}
               >
-                Discover amazing products with unbeatable prices and quality.
-                Your satisfaction is our priority.
+                {t('discoverAmazingProducts')}
               </Typography>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Button
@@ -118,7 +118,7 @@ export const Home: React.FC = () => {
                     },
                   }}
                 >
-                  Shop Now
+                  {t('shopNow')}
                 </Button>
                 <Button
                   variant="outlined"
@@ -136,7 +136,7 @@ export const Home: React.FC = () => {
                     },
                   }}
                 >
-                  Learn More
+                  Conocer Más
                 </Button>
               </Stack>
             </Box>
@@ -170,7 +170,7 @@ export const Home: React.FC = () => {
           gutterBottom
           sx={{ mb: 6 }}
         >
-          Why Choose Us
+          {t('whyChooseUs')}
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
           {features.map((feature, index) => (
@@ -221,7 +221,7 @@ export const Home: React.FC = () => {
             gutterBottom
             sx={{ mb: 6 }}
           >
-            What Our Customers Say
+            Lo Que Dicen Nuestros Clientes
           </Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 4 }}>
             {testimonials.map((testimonial, index) => (
@@ -278,24 +278,24 @@ export const Home: React.FC = () => {
       >
         <Container maxWidth="md">
           <Typography variant="h3" component="h2" gutterBottom>
-            Ready to Start Shopping?
+            {t('readyToStartShopping')}
           </Typography>
           <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-            Join thousands of satisfied customers and discover amazing deals today.
+            {t('joinThousands')}
           </Typography>
           <Stack direction="row" spacing={2} justifyContent="center">
             <Chip
-              label="Free Returns"
+              label={t('freeReturns')}
               variant="outlined"
               sx={{ color: 'white', borderColor: 'white' }}
             />
             <Chip
-              label="Money Back Guarantee"
+              label={t('moneyBackGuarantee')}
               variant="outlined"
               sx={{ color: 'white', borderColor: 'white' }}
             />
             <Chip
-              label="Fast Shipping"
+              label={t('fastShipping')}
               variant="outlined"
               sx={{ color: 'white', borderColor: 'white' }}
             />
@@ -318,7 +318,7 @@ export const Home: React.FC = () => {
                 },
               }}
             >
-              Start Shopping Now
+              {t('startShoppingNow')}
             </Button>
           </Box>
         </Container>

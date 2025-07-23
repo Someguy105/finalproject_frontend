@@ -6,6 +6,9 @@ export const formatCurrency = (amount: number, currency = 'USD'): string => {
   }).format(amount);
 };
 
+// Translations
+export { translations, t } from './translations';
+
 // Format date
 export const formatDate = (date: string | Date): string => {
   return new Intl.DateTimeFormat('en-US', {

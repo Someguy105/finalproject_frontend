@@ -92,18 +92,15 @@ export interface OrderItem {
 // Review types
 export interface Review {
   id: string;
-  productId: string;
+  productId: number;  // Changed to number to match backend
   userId: string;
   rating: number;
   title: string;
   comment: string;
+  helpfulCount?: number;
   isVerified: boolean;
-  metadata: {
-    userName: string;
-    userEmail: string;
-  };
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string;  // Changed to string as it comes from API
+  updatedAt: string;  // Changed to string as it comes from API
 }
 
 // API Response types

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -26,8 +27,11 @@ import {
 import { useProducts } from '../hooks/useProducts';
 import { Product } from '../types';
 import { formatCurrency } from '../utils';
+import { useCart } from '../contexts/CartContext';
+import { t } from '../utils';
 
 export const Products: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,14 +39,18 @@ export const Products: React.FC = () => {
   const itemsPerPage = 12;
 
   const { products, loading, error } = useProducts();
+  const { addItem } = useCart();
+
+  // Ensure products is always an array
+  const productList = Array.isArray(products) ? products : [];
 
   // Filter and sort products
-  const filteredProducts = products?.filter((product: Product) => {
+  const filteredProducts = productList.filter((product: Product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = category === 'all' || product.category.name.toLowerCase() === category.toLowerCase();
     return matchesSearch && matchesCategory;
-  }) || [];
+  });
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
@@ -67,17 +75,16 @@ export const Products: React.FC = () => {
   const categories = Array.from(new Set(products?.map((p: Product) => p.category.name) || []));
 
   const addToCart = (product: Product) => {
-    // This would be implemented with your cart context
+    addItem(product, 1);
+    // Optional: Show a snackbar or notification
     console.log('Added to cart:', product.name);
-    // For now, just show an alert
-    alert(`Added ${product.name} to cart!`);
   };
 
   if (error) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Alert severity="error">
-          Failed to load products. Please try again later.
+          {t('errorLoadingProducts')}
         </Alert>
       </Container>
     );
@@ -89,10 +96,10 @@ export const Products: React.FC = () => {
         {/* Header */}
         <Box sx={{ mb: 6 }}>
           <Typography variant="h3" component="h1" gutterBottom fontWeight="bold">
-            Our Products
+            {t('ourProducts')}
           </Typography>
           <Typography variant="h6" color="text.secondary">
-            Discover our amazing collection of high-quality products
+            {t('discoverCollection')}
           </Typography>
         </Box>
 
@@ -106,7 +113,7 @@ export const Products: React.FC = () => {
           >
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ flex: 1 }}>
               <TextField
-                placeholder="Search products..."
+                placeholder={t('searchProducts')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 InputProps={{
@@ -116,13 +123,13 @@ export const Products: React.FC = () => {
               />
               
               <FormControl sx={{ minWidth: 150 }}>
-                <InputLabel>Category</InputLabel>
+                <InputLabel>{t('category')}</InputLabel>
                 <Select
                   value={category}
-                  label="Category"
+                  label={t('category')}
                   onChange={(e) => setCategory(e.target.value)}
                 >
-                  <MenuItem value="all">All Categories</MenuItem>
+                  <MenuItem value="all">{t('allCategories')}</MenuItem>
                   {categories.map((cat) => (
                     <MenuItem key={cat} value={cat.toLowerCase()}>
                       {cat}
@@ -133,23 +140,23 @@ export const Products: React.FC = () => {
             </Stack>
 
             <FormControl sx={{ minWidth: 150 }}>
-              <InputLabel>Sort by</InputLabel>
+              <InputLabel>{t('sortBy')}</InputLabel>
               <Select
                 value={sortBy}
-                label="Sort by"
+                label={t('sortBy')}
                 onChange={(e) => setSortBy(e.target.value)}
                 startAdornment={<FilterListOutlined sx={{ mr: 1 }} />}
               >
-                <MenuItem value="name">Name A-Z</MenuItem>
-                <MenuItem value="price-low">Price: Low to High</MenuItem>
-                <MenuItem value="price-high">Price: High to Low</MenuItem>
+                <MenuItem value="name">{t('name')} A-Z</MenuItem>
+                <MenuItem value="price-low">{t('priceLowToHigh')}</MenuItem>
+                <MenuItem value="price-high">{t('priceHighToLow')}</MenuItem>
               </Select>
             </FormControl>
           </Stack>
 
           <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              {filteredProducts.length} products found
+              {filteredProducts.length} {t('productsFound')}
             </Typography>
             {searchTerm && (
               <Chip
@@ -207,6 +214,7 @@ export const Products: React.FC = () => {
                       boxShadow: 6,
                     },
                   }}
+                  onClick={() => navigate(`/products/${product.id}`)}
                 >
                   <CardMedia
                     component="div"
@@ -278,7 +286,7 @@ export const Products: React.FC = () => {
                         color={product.stock > 0 ? 'success.main' : 'error.main'}
                         fontWeight="medium"
                       >
-                        {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                        {product.stock > 0 ? `${product.stock} ${t('inStock')}` : t('outOfStock')}
                       </Typography>
                     </Stack>
                     
@@ -286,19 +294,32 @@ export const Products: React.FC = () => {
                       <Typography variant="h6" color="primary" fontWeight="bold">
                         {formatCurrency(product.price)}
                       </Typography>
-                      <Button
-                        variant="contained"
-                        size="small"
-                        startIcon={<ShoppingCartOutlined />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(product);
-                        }}
-                        disabled={product.stock === 0}
-                        sx={{ minWidth: 'auto' }}
-                      >
-                        Add
-                      </Button>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/products/${product.id}`);
+                          }}
+                          sx={{ minWidth: 'auto' }}
+                        >
+                          {t('details')}
+                        </Button>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<ShoppingCartOutlined />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(product);
+                          }}
+                          disabled={product.stock === 0}
+                          sx={{ minWidth: 'auto' }}
+                        >
+                          {t('addToCart')}
+                        </Button>
+                      </Stack>
                     </Stack>
                   </CardContent>
                 </Card>
@@ -309,10 +330,10 @@ export const Products: React.FC = () => {
             {paginatedProducts.length === 0 && !loading && (
               <Box sx={{ textAlign: 'center', py: 8 }}>
                 <Typography variant="h5" gutterBottom>
-                  No products found
+                  {t('noProductsFound')}
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Try adjusting your search or filter criteria
+                  {t('tryAdjustingSearch')}
                 </Typography>
               </Box>
             )}

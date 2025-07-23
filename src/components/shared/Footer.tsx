@@ -8,6 +8,7 @@ import {
   IconButton,
   Divider
 } from '@mui/material';
+import { t } from '../../utils';
 import {
   Twitter as TwitterIcon,
   Facebook as FacebookIcon,
@@ -23,30 +24,30 @@ export const Footer: React.FC = () => {
           {/* Company Info */}
           <Box>
             <Typography variant="h6" gutterBottom fontWeight="bold">
-              E-SHOP
+              {t('eShop')}
             </Typography>
             <Typography variant="body2" color="grey.300">
-              Your one-stop destination for quality products at great prices.
+              {t('oneStopDestination')}
             </Typography>
           </Box>
 
           {/* Quick Links */}
           <Box>
             <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-              Quick Links
+              {t('quickLinks')}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Link component={RouterLink} to="/" color="grey.300" underline="hover" variant="body2">
-                Home
+                {t('home')}
               </Link>
               <Link component={RouterLink} to="/products" color="grey.300" underline="hover" variant="body2">
-                Products
+                {t('products')}
               </Link>
               <Link component={RouterLink} to="/about" color="grey.300" underline="hover" variant="body2">
-                About Us
+                {t('aboutUs')}
               </Link>
               <Link component={RouterLink} to="/contact" color="grey.300" underline="hover" variant="body2">
-                Contact
+                {t('contact')}
               </Link>
             </Box>
           </Box>
@@ -54,20 +55,20 @@ export const Footer: React.FC = () => {
           {/* Customer Service */}
           <Box>
             <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-              Customer Service
+              {t('customerService')}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Link href="/help" color="grey.300" underline="hover" variant="body2">
-                Help Center
+                {t('helpCenter')}
               </Link>
               <Link href="/returns" color="grey.300" underline="hover" variant="body2">
-                Returns
+                {t('returns')}
               </Link>
               <Link href="/shipping" color="grey.300" underline="hover" variant="body2">
-                Shipping Info
+                {t('shippingInfo')}
               </Link>
               <Link href="/track" color="grey.300" underline="hover" variant="body2">
-                Track Order
+                {t('trackOrder')}
               </Link>
             </Box>
           </Box>
@@ -75,7 +76,7 @@ export const Footer: React.FC = () => {
           {/* Connect */}
           <Box>
             <Typography variant="subtitle1" gutterBottom fontWeight="medium">
-              Connect With Us
+              {t('connectWithUs')}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <IconButton
@@ -138,7 +139,7 @@ export const Footer: React.FC = () => {
 
         <Box sx={{ textAlign: 'center' }}>
           <Typography variant="body2" color="grey.300">
-            © 2025 E-Shop. All rights reserved.
+            © 2025 {t('eShop')}. {t('allRightsReserved')}
           </Typography>
         </Box>
       </Container>

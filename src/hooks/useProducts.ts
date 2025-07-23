@@ -2,6 +2,21 @@ import { useState, useEffect } from 'react';
 import { productApi, categoryApi } from '../api';
 import { Product, Category } from '../types';
 
+// Backend Product type (what we actually get from API)
+interface BackendProduct {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  categoryId: number;
+  images: string[];
+  isAvailable: boolean;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const useProducts = (params?: {
   category?: string;
   search?: string;
@@ -18,10 +33,46 @@ export const useProducts = (params?: {
       try {
         setLoading(true);
         setError(null);
-        const response: Product[] = await productApi.getProducts(params);
-        setProducts(response);
+        
+        // Fetch both products and categories
+        const [productsResponse, categoriesResponse] = await Promise.all([
+          productApi.getProducts(params) as unknown as BackendProduct[],
+          categoryApi.getCategories()
+        ]);
+        
+        // Create a map of categories for quick lookup
+        const categoryMap = new Map<number, Category>();
+        categoriesResponse.forEach(cat => {
+          categoryMap.set(Number(cat.id), cat);
+        });
+        
+        // Transform backend products to frontend products
+        const transformedProducts: Product[] = productsResponse.map(backendProduct => ({
+          id: String(backendProduct.id),
+          name: backendProduct.name,
+          description: backendProduct.description,
+          price: backendProduct.price,
+          stock: backendProduct.stock,
+          category: categoryMap.get(backendProduct.categoryId) || {
+            id: String(backendProduct.categoryId),
+            name: 'Unknown',
+            description: '',
+            createdAt: '',
+            updatedAt: ''
+          },
+          images: backendProduct.images || [],
+          metadata: {
+            featured: backendProduct.metadata?.featured || false
+          },
+          createdAt: backendProduct.createdAt,
+          updatedAt: backendProduct.updatedAt
+        }));
+        
+        setProducts(transformedProducts);
       } catch (err) {
+        console.error('Failed to fetch products:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
+        setProducts([]);
       } finally {
         setLoading(false);
       }
@@ -34,10 +85,46 @@ export const useProducts = (params?: {
     try {
       setLoading(true);
       setError(null);
-      const response: Product[] = await productApi.getProducts(params);
-      setProducts(response);
+      
+      // Fetch both products and categories
+      const [productsResponse, categoriesResponse] = await Promise.all([
+        productApi.getProducts(params) as unknown as BackendProduct[],
+        categoryApi.getCategories()
+      ]);
+      
+      // Create a map of categories for quick lookup
+      const categoryMap = new Map<number, Category>();
+      categoriesResponse.forEach(cat => {
+        categoryMap.set(Number(cat.id), cat);
+      });
+      
+      // Transform backend products to frontend products
+      const transformedProducts: Product[] = productsResponse.map(backendProduct => ({
+        id: String(backendProduct.id),
+        name: backendProduct.name,
+        description: backendProduct.description,
+        price: backendProduct.price,
+        stock: backendProduct.stock,
+        category: categoryMap.get(backendProduct.categoryId) || {
+          id: String(backendProduct.categoryId),
+          name: 'Unknown',
+          description: '',
+          createdAt: '',
+          updatedAt: ''
+        },
+        images: backendProduct.images || [],
+        metadata: {
+          featured: backendProduct.metadata?.featured || false
+        },
+        createdAt: backendProduct.createdAt,
+        updatedAt: backendProduct.updatedAt
+      }));
+      
+      setProducts(transformedProducts);
     } catch (err) {
+      console.error('Failed to refetch products:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
+      setProducts([]);
     } finally {
       setLoading(false);
     }

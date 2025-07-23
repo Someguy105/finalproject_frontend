@@ -2,7 +2,7 @@ import { get, post, put, del } from './client';
 import { Product, Category } from '../types';
 
 export const productApi = {
-  // Get all products - Fixed: backend returns raw data, not wrapped in ApiResponse
+  // Get all products - Backend wraps data in ApiResponse, client extracts data property
   getProducts: (params?: {
     category?: string;
     search?: string;
@@ -14,39 +14,39 @@ export const productApi = {
     return get<Product[]>('/products');
   },
 
-  // Get single product by ID - Fixed: backend returns raw data
+  // Get single product by ID - Backend wraps data in ApiResponse, client extracts data property
   getProduct: (id: string): Promise<Product> => {
     return get<Product>(`/products/${id}`);
   },
 
-  // Create new product (admin only) - Fixed: backend returns raw data
+  // Create new product (admin only) - Backend wraps data in ApiResponse, client extracts data property
   createProduct: (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product> => {
     return post<Product>('/admin/products', productData);
   },
 
-  // Update product (admin only) - Fixed: backend returns raw data
+  // Update product - Backend wraps data in ApiResponse, client extracts data property
   updateProduct: (id: string, productData: Partial<Product>): Promise<Product> => {
-    return put<Product>(`/admin/products/${id}`, productData);
+    return put<Product>(`/products/${id}`, productData);
   },
 
-  // Delete product (admin only) - Fixed: backend returns boolean success, not void
+  // Delete product (admin only) - Backend wraps data in ApiResponse, client extracts data property
   deleteProduct: (id: string): Promise<boolean> => {
     return del<boolean>(`/admin/products/${id}`);
   },
 };
 
 export const categoryApi = {
-  // Get all categories - Fixed: backend returns raw data
+  // Get all categories - Backend wraps data in ApiResponse, client extracts data property
   getCategories: (): Promise<Category[]> => {
     return get<Category[]>('/categories');
   },
 
-  // Get single category by ID - Fixed: backend returns raw data
+  // Get single category by ID - Backend wraps data in ApiResponse, client extracts data property
   getCategory: (id: string): Promise<Category> => {
     return get<Category>(`/categories/${id}`);
   },
 
-  // Create new category (admin only) - Fixed: backend returns raw data
+  // Create new category (admin only) - Backend wraps data in ApiResponse, client extracts data property
   createCategory: (categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category> => {
     return post<Category>('/admin/categories', categoryData);
   },

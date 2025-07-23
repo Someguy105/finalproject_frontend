@@ -32,7 +32,15 @@ export async function apiRequest<T>(
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    return await response.json();
+    const jsonResponse = await response.json();
+    
+    // Backend wraps responses in { success, statusCode, message, data, timestamp, path }
+    // Extract the data property if it exists, otherwise return the full response
+    if (jsonResponse && typeof jsonResponse === 'object' && 'data' in jsonResponse) {
+      return jsonResponse.data;
+    }
+    
+    return jsonResponse;
   } catch (error) {
     console.error('API request failed:', error);
     throw error;

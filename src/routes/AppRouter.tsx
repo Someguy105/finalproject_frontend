@@ -8,25 +8,28 @@ import { Header, Footer } from '../components/shared';
 import { ProtectedRoute } from '../components/auth/ProtectedRoute';
 import { Unauthorized } from '../pages/Unauthorized';
 import Login from '../pages/Login';
+import Register from '../pages/Register';
 import { AuthTest } from '../components/auth/AuthTest';
 import AdminProducts from '../pages/admin/AdminProducts';
 import AdminOrders from '../pages/admin/AdminOrders';
+import AdminUsers from '../pages/admin/AdminUsers';
+import AdminLogs from '../pages/admin/AdminLogs';
+import AdminReviews from '../pages/admin/AdminReviews';
+import AdminCategories from '../pages/admin/AdminCategories';
+import AdminDashboard from '../pages/admin/Dashboard';
 import Home from '../pages/Home';
 import Products from '../pages/Products';
+import ProductDetail from '../pages/ProductDetail';
+import Cart from '../pages/Cart';
+import OrderDetail from '../pages/OrderDetail';
+import UserReviews from '../pages/UserReviews';
+import CustomerOrders from '../pages/CustomerOrders';
 
 // Public Pages
-const ProductDetail = React.lazy(() => Promise.resolve({ default: () => <div>Product Detail</div> }));
+// const ProductDetail = React.lazy(() => Promise.resolve({ default: () => <div>Product Detail</div> }));
 
-// Auth Pages
-const Register = React.lazy(() => Promise.resolve({ default: () => <div>Register Page</div> }));
-
-// Cart and Checkout Pages (placeholders)
-const Cart = React.lazy(() => Promise.resolve({ default: () => <div>Cart Page</div> }));
+// Checkout Pages (placeholders)
 const Checkout = React.lazy(() => Promise.resolve({ default: () => <div>Checkout Page</div> }));
-
-// Admin Pages
-const Dashboard = React.lazy(() => Promise.resolve({ default: () => <div>Admin Dashboard</div> }));
-const AdminCategories = React.lazy(() => Promise.resolve({ default: () => <div>Admin Categories</div> }));
 
 export const AppRouter: React.FC = () => {
   return (
@@ -66,7 +69,7 @@ export const AppRouter: React.FC = () => {
                     {/* Admin Routes */}
                     <Route path="/admin" element={
                       <ProtectedRoute adminOnly>
-                        <Dashboard />
+                        <AdminDashboard />
                       </ProtectedRoute>
                     } />
                     <Route path="/admin/products" element={
@@ -84,6 +87,21 @@ export const AppRouter: React.FC = () => {
                         <AdminCategories />
                       </ProtectedRoute>
                     } />
+                    <Route path="/admin/users" element={
+                      <ProtectedRoute adminOnly>
+                        <AdminUsers />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/reviews" element={
+                      <ProtectedRoute adminOnly>
+                        <AdminReviews />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/admin/logs" element={
+                      <ProtectedRoute adminOnly>
+                        <AdminLogs />
+                      </ProtectedRoute>
+                    } />
                     
                     {/* Customer Only Routes */}
                     <Route path="/profile" element={
@@ -93,7 +111,17 @@ export const AppRouter: React.FC = () => {
                     } />
                     <Route path="/orders" element={
                       <ProtectedRoute requiredRole="customer">
-                        <div>Customer Orders</div>
+                        <CustomerOrders />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/orders/:id" element={
+                      <ProtectedRoute>
+                        <OrderDetail />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/reviews" element={
+                      <ProtectedRoute requiredRole="customer">
+                        <UserReviews />
                       </ProtectedRoute>
                     } />
                     

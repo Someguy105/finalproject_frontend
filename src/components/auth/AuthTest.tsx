@@ -10,7 +10,7 @@ export const AuthTest: React.FC = () => {
   const testAdminLogin = async () => {
     setTestResult('Testing admin login...');
     try {
-      await login('admin@example.com', 'admin123');
+      await login('admin@test.com', 'admin123');
       setTestResult('✅ Admin login successful!');
     } catch (error: any) {
       setTestResult(`❌ Admin login failed: ${error.message}`);
@@ -20,7 +20,7 @@ export const AuthTest: React.FC = () => {
   const testCustomerLogin = async () => {
     setTestResult('Testing customer login...');
     try {
-      await login('customer@example.com', 'customer123');
+      await login('customer@test.com', 'customer123');
       setTestResult('✅ Customer login successful!');
     } catch (error: any) {
       setTestResult(`❌ Customer login failed: ${error.message}`);

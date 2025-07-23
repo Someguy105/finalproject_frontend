@@ -1,18 +1,5 @@
 import { get, post, put, del } from './client';
-
-// Define Review type since it's not in main types
-export interface Review {
-  id: string;
-  productId: number;
-  userId: string;
-  rating: number;
-  title: string;
-  comment: string;
-  helpfulCount: number;
-  isVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Review } from '../types';
 
 export const reviewApi = {
   // Get all reviews

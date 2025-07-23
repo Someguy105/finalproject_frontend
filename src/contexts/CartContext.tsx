@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { Product, CartItem } from '../types';
+import { orderApi, orderItemApi, productApi } from '../api';
 
 interface CartState {
   items: CartItem[];
@@ -18,6 +19,13 @@ interface CartContextType extends CartState {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  checkout: (shippingAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+  }, paymentMethod?: string) => Promise<number>; // Returns order ID
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -124,6 +132,93 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     dispatch({ type: 'CLEAR_CART' });
   };
 
+  const checkout = async (
+    shippingAddress?: {
+      street: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    },
+    paymentMethod = 'credit_card'
+  ): Promise<number> => {
+    if (state.items.length === 0) {
+      throw new Error('Cart is empty');
+    }
+
+    // Calculate totals
+    const subtotal = state.totalAmount;
+    const taxAmount = subtotal * 0.08; // 8% tax
+    const shippingAmount = subtotal > 100 ? 0 : 10; // Free shipping over $100
+    const discountAmount = 0;
+    const totalAmount = subtotal + taxAmount + shippingAmount - discountAmount;
+
+    // Generate order number
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+    // Prepare order data (without items)
+    const orderData = {
+      userId: 1, // Default user ID since no auth is required
+      orderNumber,
+      subtotal,
+      taxAmount,
+      shippingAmount,
+      discountAmount,
+      totalAmount,
+      currency: 'USD',
+      shippingAddress: shippingAddress || {
+        street: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        country: 'US'
+      },
+      paymentMethod,
+      notes: 'Order placed from cart',
+    };
+
+    try {
+      // Create order first
+      const order = await orderApi.createOrder(orderData);
+      
+      // Create order items
+      for (const item of state.items) {
+        await orderItemApi.createOrderItem({
+          orderId: order.id,
+          productId: Number(item.product.id),
+          quantity: item.quantity,
+          unitPrice: item.product.price,
+          totalPrice: item.product.price * item.quantity,
+          productSnapshot: {
+            name: item.product.name,
+            description: item.product.description,
+            image: item.product.images?.[0] || '',
+          },
+        });
+
+        // Reduce product stock
+        try {
+          console.log(`Updating stock for product ${item.product.id}: ${item.product.stock} -> ${item.product.stock - item.quantity}`);
+          await productApi.updateProduct(item.product.id, {
+            stock: item.product.stock - item.quantity
+          });
+          console.log(`Successfully updated stock for product ${item.product.id}`);
+        } catch (stockError) {
+          console.error(`Failed to update stock for product ${item.product.id}:`, stockError);
+          // Continue with order creation even if stock update fails
+        }
+      }
+      
+      // Clear cart after successful order creation
+      dispatch({ type: 'CLEAR_CART' });
+      
+      return order.id;
+    } catch (error) {
+      console.error('Checkout failed:', error);
+      throw error;
+    }
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -132,6 +227,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         removeItem,
         updateQuantity,
         clearCart,
+        checkout,
       }}
     >
       {children}

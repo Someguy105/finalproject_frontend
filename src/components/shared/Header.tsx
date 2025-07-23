@@ -15,6 +15,7 @@ import {
   Store as StoreIcon
 } from '@mui/icons-material';
 import { useAuth, useCart } from '../../contexts';
+import { t } from '../../utils';
 
 export const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -47,7 +48,7 @@ export const Header: React.FC = () => {
               textDecoration: 'none',
             }}
           >
-            E-SHOP
+            E-TIENDA
           </Typography>
 
           <StoreIcon sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }} />
@@ -67,7 +68,7 @@ export const Header: React.FC = () => {
               textDecoration: 'none',
             }}
           >
-            E-SHOP
+            E-TIENDA
           </Typography>
 
           {/* Navigation */}
@@ -77,14 +78,14 @@ export const Header: React.FC = () => {
               to="/"
               sx={{ my: 2, color: 'text.primary', display: 'block' }}
             >
-              Home
+              {t('home')}
             </Button>
             <Button
               component={RouterLink}
               to="/products"
               sx={{ my: 2, color: 'text.primary', display: 'block' }}
             >
-              Products
+              {t('products')}
             </Button>
             {isAuthenticated && user?.role === 'admin' && (
               <Button
@@ -92,8 +93,26 @@ export const Header: React.FC = () => {
                 to="/admin"
                 sx={{ my: 2, color: 'text.primary', display: 'block' }}
               >
-                Admin
+                {t('admin')}
               </Button>
+            )}
+            {isAuthenticated && user?.role === 'customer' && (
+              <>
+                <Button
+                  component={RouterLink}
+                  to="/orders"
+                  sx={{ my: 2, color: 'text.primary', display: 'block' }}
+                >
+                  {t('myOrders')}
+                </Button>
+                <Button
+                  component={RouterLink}
+                  to="/reviews"
+                  sx={{ my: 2, color: 'text.primary', display: 'block' }}
+                >
+                  {t('myReviews')}
+                </Button>
+              </>
             )}
           </Box>
 
@@ -114,19 +133,19 @@ export const Header: React.FC = () => {
             {isAuthenticated ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="body2" color="text.secondary">
-                  Hi, {user?.firstName}
+                  {t('hi')}, {user?.firstName}
                 </Typography>
                 <Button color="inherit" onClick={handleLogout}>
-                  Logout
+                  {t('logout')}
                 </Button>
               </Box>
             ) : (
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button component={RouterLink} to="/login" color="inherit">
-                  Login
+                  {t('login')}
                 </Button>
                 <Button component={RouterLink} to="/register" variant="contained">
-                  Register
+                  {t('register')}
                 </Button>
               </Box>
             )}

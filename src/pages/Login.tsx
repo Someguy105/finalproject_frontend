@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -12,7 +12,8 @@ import {
   Stack,
   Divider,
 } from '@mui/material';
-import { LoginOutlined, AdminPanelSettingsOutlined, PersonOutlined } from '@mui/icons-material';
+import { LoginOutlined, AdminPanelSettingsOutlined, PersonOutlined, PersonAddOutlined } from '@mui/icons-material';
+import { t } from '../utils';
 
 interface LocationState {
   from?: {
@@ -36,7 +37,7 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Please fill in all fields');
+      setError('Por favor completa todos los campos');
       return;
     }
 
@@ -47,7 +48,7 @@ export const Login: React.FC = () => {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(err.response?.data?.message || t('loginFailed'));
     } finally {
       setIsLoading(false);
     }
@@ -55,10 +56,10 @@ export const Login: React.FC = () => {
 
   const fillTestCredentials = (role: 'admin' | 'customer') => {
     if (role === 'admin') {
-      setEmail('admin@example.com');
+      setEmail('admin@test.com');
       setPassword('admin123');
     } else {
-      setEmail('customer@example.com');
+      setEmail('customer@test.com');
       setPassword('customer123');
     }
   };
@@ -87,12 +88,12 @@ export const Login: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
             <LoginOutlined sx={{ fontSize: 40, color: 'primary.main', mr: 1 }} />
             <Typography component="h1" variant="h4" fontWeight="bold">
-              Sign In
+              {t('signIn')}
             </Typography>
           </Box>
           
           <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            Sign in to your account to continue
+            {t('signInToAccount')}
           </Typography>
 
           {error && (
@@ -107,7 +108,7 @@ export const Login: React.FC = () => {
                 required
                 fullWidth
                 id="email"
-                label="Email Address"
+                label={t('emailAddress')}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -120,7 +121,7 @@ export const Login: React.FC = () => {
                 required
                 fullWidth
                 name="password"
-                label="Password"
+                label={t('password')}
                 type="password"
                 id="password"
                 autoComplete="current-password"
@@ -141,14 +142,14 @@ export const Login: React.FC = () => {
                   fontWeight: 600,
                 }}
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? 'Iniciando Sesión...' : t('signIn')}
               </Button>
             </Stack>
           </Box>
 
           <Divider sx={{ width: '100%', my: 4 }}>
             <Typography variant="body2" color="text.secondary">
-              Test Credentials
+              {t('quickAccess')}
             </Typography>
           </Divider>
 
@@ -161,7 +162,7 @@ export const Login: React.FC = () => {
               onClick={() => fillTestCredentials('admin')}
               sx={{ py: 1 }}
             >
-              Admin Login
+              {t('adminLogin')}
             </Button>
             <Button
               fullWidth
@@ -171,13 +172,31 @@ export const Login: React.FC = () => {
               onClick={() => fillTestCredentials('customer')}
               sx={{ py: 1 }}
             >
-              Customer Login
+              {t('customerLogin')}
             </Button>
           </Stack>
 
           <Typography variant="caption" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
-            Note: Make sure these test accounts exist in your backend
+            Nota: Asegúrate de que estas cuentas de prueba existan en tu backend
           </Typography>
+
+          <Divider sx={{ width: '100%', my: 4 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('dontHaveAccount')}
+            </Typography>
+          </Divider>
+
+          <Button
+            component={Link}
+            to="/register"
+            fullWidth
+            variant="outlined"
+            color="secondary"
+            startIcon={<PersonAddOutlined />}
+            sx={{ py: 1.5 }}
+          >
+            {t('createNewAccount')}
+          </Button>
         </Paper>
       </Box>
     </Container>

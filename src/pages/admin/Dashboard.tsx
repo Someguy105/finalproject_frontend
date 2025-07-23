@@ -1,202 +1,294 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../contexts';
+import {
+  Box,
+  Container,
+  Grid,
+  Paper,
+  Typography,
+  Card,
+  CardContent,
+  List,
+  ListItem,
+  ListItemText,
+  Chip,
+  IconButton,
+  Button
+} from '@mui/material';
+import {
+  ShoppingCart,
+  People,
+  Category,
+  Assessment,
+  TrendingUp,
+  ShoppingBag,
+  RateReview,
+  Description,
+  Visibility,
+  MoreVert
+} from '@mui/icons-material';
+import { t } from '../../utils';
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: 'primary' | 'secondary' | 'success' | 'warning';
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, icon, color }) => (
+  <Card sx={{ height: '100%' }}>
+    <CardContent>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box>
+          <Typography variant="h4" fontWeight="bold" color={`${color}.main`}>
+            {value}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {title}
+          </Typography>
+        </Box>
+        <Box sx={{ color: `${color}.main` }}>
+          {icon}
+        </Box>
+      </Box>
+    </CardContent>
+  </Card>
+);
 
 export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
-
-  // Mock stats - in a real app, these would come from API calls
+  // Mock data - En producción esto vendría de la API
   const stats = {
-    totalProducts: 156,
-    totalOrders: 89,
-    totalUsers: 234,
-    totalRevenue: 45670
+    totalProducts: 4,
+    totalOrders: 4,
+    totalUsers: 6,
+    totalRevenue: '$3,373'
   };
 
   const recentOrders = [
-    { id: 'ORD-001', customer: 'John Doe', amount: 299.99, status: 'delivered' },
-    { id: 'ORD-002', customer: 'Jane Smith', amount: 159.99, status: 'shipped' },
-    { id: 'ORD-003', customer: 'Bob Johnson', amount: 89.99, status: 'processing' },
+    { id: 'ORD-2025-001', customer: 'Tech Customer', total: '$2,799.97', status: 'delivered' },
+    { id: 'ORD-2025-002', customer: 'Fashion Customer', total: '$215.18', status: 'shipped' },
+    { id: 'ORD-2025-003', customer: 'Tech Customer', total: '$59.98', status: 'pending' },
+    { id: 'ORD-2025-004', customer: 'Fashion Customer', total: '$298.99', status: 'processing' },
   ];
 
+  const topProducts = [
+    { name: 'Gaming Laptop Pro', sales: 1, revenue: '$2,499.99' },
+    { name: 'Premium Wireless Headphones', sales: 2, revenue: '$599.98' },
+    { name: 'Designer Winter Jacket', sales: 1, revenue: '$189.99' },
+    { name: 'Programming Complete Guide', sales: 1, revenue: '$49.99' },
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'success';
+      case 'pending': return 'warning';
+      case 'shipped': return 'info';
+      case 'cancelled': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed': return t('completed');
+      case 'pending': return t('pending');
+      case 'shipped': return t('shipped');
+      case 'cancelled': return t('cancelled');
+      default: return status;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Welcome back, {user?.firstName}!</p>
-        </div>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="primary">
+        {t('adminDashboard')}
+      </Typography>
+      
+      <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 4 }}>
+        {t('overview')}
+      </Typography>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Products</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalProducts}</p>
-              </div>
-            </div>
-          </div>
+      {/* Statistics Cards */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
+        gap: 3, 
+        mb: 4 
+      }}>
+        <StatCard
+          title={t('totalProducts')}
+          value={stats.totalProducts}
+          icon={<ShoppingBag fontSize="large" />}
+          color="primary"
+        />
+        <StatCard
+          title={t('totalOrders')}
+          value={stats.totalOrders}
+          icon={<ShoppingCart fontSize="large" />}
+          color="secondary"
+        />
+        <StatCard
+          title={t('totalUsers')}
+          value={stats.totalUsers}
+          icon={<People fontSize="large" />}
+          color="success"
+        />
+        <StatCard
+          title={t('totalRevenue')}
+          value={stats.totalRevenue}
+          icon={<TrendingUp fontSize="large" />}
+          color="warning"
+        />
+      </Box>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalOrders}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalUsers}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center">
-                  <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                  </svg>
-                </div>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-semibold text-gray-900">${stats.totalRevenue.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, 
+        gap: 3 
+      }}>
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <Link
-                to="/admin/products/new"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">Add Product</p>
-                </div>
-              </Link>
+        <Paper sx={{ p: 3, height: '100%' }}>
+          <Typography variant="h6" gutterBottom fontWeight="bold">
+            {t('actions')}
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Button
+              component={Link}
+              to="/admin/products"
+              variant="outlined"
+              startIcon={<ShoppingBag />}
+              fullWidth
+            >
+              {t('manageProducts')}
+            </Button>
+            <Button
+              component={Link}
+              to="/admin/orders"
+              variant="outlined"
+              startIcon={<ShoppingCart />}
+              fullWidth
+            >
+              {t('manageOrders')}
+            </Button>
+            <Button
+              component={Link}
+              to="/admin/categories"
+              variant="outlined"
+              startIcon={<Category />}
+              fullWidth
+            >
+              {t('manageCategories')}
+            </Button>
+            <Button
+              component={Link}
+              to="/admin/users"
+              variant="outlined"
+              startIcon={<People />}
+              fullWidth
+            >
+              {t('manageUsers')}
+            </Button>
+            <Button
+              component={Link}
+              to="/admin/reviews"
+              variant="outlined"
+              startIcon={<RateReview />}
+              fullWidth
+            >
+              {t('manageReviews')}
+            </Button>
+            <Button
+              component={Link}
+              to="/admin/logs"
+              variant="outlined"
+              startIcon={<Description />}
+              fullWidth
+            >
+              {t('manageLogs')}
+            </Button>
+          </Box>
+        </Paper>
 
-              <Link
-                to="/admin/categories/new"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">Add Category</p>
-                </div>
-              </Link>
+        {/* Recent Orders */}
+        <Paper sx={{ p: 3, height: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" fontWeight="bold">
+              {t('recentOrders')}
+            </Typography>
+            <Button component={Link} to="/admin/orders" size="small">
+              {t('view')} {t('details')}
+            </Button>
+          </Box>
+          <List>
+            {recentOrders.map((order, index) => (
+              <ListItem key={index} sx={{ px: 0 }}>
+                <ListItemText
+                  primary={
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="body2" fontWeight="medium">
+                        {order.id}
+                      </Typography>
+                      <Chip
+                        label={getStatusText(order.status)}
+                        color={getStatusColor(order.status) as any}
+                        size="small"
+                      />
+                    </Box>
+                  }
+                  secondary={
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {order.customer}
+                      </Typography>
+                      <Typography variant="body2" fontWeight="medium" color="primary">
+                        {order.total}
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
 
-              <Link
-                to="/admin/products"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">Manage Products</p>
-                </div>
-              </Link>
-
-              <Link
-                to="/admin/orders"
-                className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center">
-                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">View Orders</p>
-                </div>
-              </Link>
-            </div>
-          </div>
-
-          {/* Recent Orders */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
-              <Link to="/admin/orders" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-                View all
-              </Link>
-            </div>
-            <div className="space-y-4">
-              {recentOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                  <div>
-                    <p className="font-medium text-gray-900">{order.id}</p>
-                    <p className="text-sm text-gray-600">{order.customer}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-gray-900">${order.amount}</p>
-                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
-                      order.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                      order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+        {/* Top Products */}
+        <Paper sx={{ p: 3, height: '100%' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6" fontWeight="bold">
+              {t('topProducts')}
+            </Typography>
+            <Button component={Link} to="/admin/products" size="small">
+              {t('view')} {t('details')}
+            </Button>
+          </Box>
+          <List>
+            {topProducts.map((product, index) => (
+              <ListItem key={index} sx={{ px: 0 }}>
+                <ListItemText
+                  primary={
+                    <Typography variant="body2" fontWeight="medium">
+                      {product.name}
+                    </Typography>
+                  }
+                  secondary={
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {product.sales} ventas
+                      </Typography>
+                      <Typography variant="body2" fontWeight="medium" color="success.main">
+                        {product.revenue}
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
+      </Box>
+    </Container>
   );
 };
+
+export default Dashboard;
