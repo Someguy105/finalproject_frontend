@@ -30,8 +30,49 @@ export const productApi = {
   },
 
   // Delete product (admin only) - Backend wraps data in ApiResponse, client extracts data property
-  deleteProduct: (id: string): Promise<boolean> => {
-    return del<boolean>(`/admin/products/${id}`);
+  deleteProduct: async (id: string): Promise<boolean> => {
+    try {
+      // Intenta primero con el endpoint administrativo
+      console.log('Intentando eliminar producto con endpoint admin:', `/admin/products/${id}`);
+      return await del<boolean>(`/admin/products/${id}`);
+    } catch (error: any) {
+      console.log('Error en endpoint admin, intentando alternativas:', error.message);
+      
+      // Si falla con 404, intenta con el endpoint regular (sin /admin)
+      if (error.message?.includes('404')) {
+        try {
+          console.log('Intentando eliminar producto con endpoint regular:', `/products/${id}`);
+          return await del<boolean>(`/products/${id}`);
+        } catch (secondError: any) {
+          console.log('Error en endpoint regular:', secondError.message);
+          
+          // Si aún falla, intenta con el endpoint deprecado (si existiera)
+          try {
+            console.log('Intentando con endpoint legacy:', `/api/products/${id}`);
+            return await del<boolean>(`/api/products/${id}`);
+          } catch (finalError) {
+            console.log('Todos los intentos de eliminación fallaron');
+            throw new Error('No se pudo eliminar el producto. El servicio puede estar temporalmente no disponible.');
+          }
+        }
+      }
+      
+      // Si no es un 404, propaga el error original
+      throw error;
+    }
+  },
+  
+  // Método alternativo para marcar un producto como eliminado (soft delete)
+  markProductAsDeleted: (id: string): Promise<Product> => {
+    return put<Product>(`/products/${id}`, {
+      isAvailable: false,
+      stock: 0,
+      metadata: {
+        featured: false,
+        deleted: true,
+        deletedAt: new Date().toISOString()
+      }
+    });
   },
 };
 

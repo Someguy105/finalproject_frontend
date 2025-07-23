@@ -34,7 +34,10 @@ import {
   Edit,
   Delete,
   Add,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Visibility,
+  VisibilityOff,
+  Restore
 } from '@mui/icons-material';
 import { t } from '../../utils';
 import { productApi, categoryApi } from '../../api/products';
@@ -68,6 +71,7 @@ const AdminProducts: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [showDeleted, setShowDeleted] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
@@ -146,11 +150,20 @@ const AdminProducts: React.FC = () => {
     loadData();
   }, []);
 
+  // Detecta productos que han sido "soft deleted" (inactivos con stock 0)
+  const isProductDeleted = (product: Product) => {
+    return product.status === 'inactive' && product.stock === 0;
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || product.category.id.toString() === categoryFilter;
-    return matchesSearch && matchesCategory;
+    
+    // Solo muestra productos eliminados si showDeleted está activo
+    const showProduct = showDeleted || !isProductDeleted(product);
+    
+    return matchesSearch && matchesCategory && showProduct;
   });
 
   const handleChangePage = (event: unknown, newPage: number) => {
@@ -166,18 +179,130 @@ const AdminProducts: React.FC = () => {
     setSelectedProduct(product);
     setOpenDialog(true);
   };
+  
+  // Función para restaurar productos que han sido "eliminados"
+  const handleRestoreProduct = async (productId: string) => {
+    if (window.confirm('¿Está seguro que desea restaurar este producto?')) {
+      try {
+        console.log('Restaurando producto con ID:', productId);
+        
+        // Busca el producto en el estado local
+        const productToRestore = products.find(p => p.id === productId);
+        if (!productToRestore) {
+          throw new Error('Producto no encontrado en la lista local');
+        }
+        
+        // Prepara los datos para restaurar el producto
+        const updateData = {
+          name: productToRestore.name,
+          description: productToRestore.description,
+          price: productToRestore.price.toString(),
+          stock: 1, // Restaura con al menos 1 de stock
+          images: productToRestore.image ? [productToRestore.image] : [],
+          categoryId: parseInt(productToRestore.category.id),
+          isAvailable: true, // Marca como disponible
+          metadata: {
+            featured: true,
+            deleted: false // Quita la marca de eliminado
+          }
+        };
+        
+        // Actualiza el producto
+        await productApi.updateProduct(productId, updateData as any);
+        
+        // Actualiza el estado local
+        setProducts(products.map(product => 
+          product.id === productId 
+            ? {...product, status: 'active', stock: 1} 
+            : product
+        ));
+        
+        setSnackbar({
+          open: true,
+          message: 'Producto restaurado exitosamente',
+          severity: 'success'
+        });
+      } catch (error) {
+        console.error('Error restaurando producto:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        setSnackbar({
+          open: true,
+          message: 'Error restaurando producto: ' + errorMessage,
+          severity: 'error'
+        });
+      }
+    }
+  };
 
   const handleDeleteProduct = async (productId: string) => {
     if (window.confirm('¿Está seguro que desea eliminar este producto?')) {
       try {
         console.log('Deleting product with ID:', productId);
-        await productApi.deleteProduct(productId);
-        setProducts(products.filter(product => product.id !== productId));
-        setSnackbar({ open: true, message: 'Producto eliminado exitosamente', severity: 'success' });
+        
+        try {
+          // Intenta el método normal de eliminación primero
+          await productApi.deleteProduct(productId);
+          
+          // Si tiene éxito, actualiza el estado local
+          setProducts(products.filter(product => product.id !== productId));
+          setSnackbar({ open: true, message: 'Producto eliminado exitosamente', severity: 'success' });
+        } catch (deleteError: any) {
+          console.log('Error en método principal de eliminación:', deleteError);
+          
+          // Si el endpoint de eliminación falla con 404, usa el método alternativo de "soft delete"
+          if (deleteError.message?.includes('404')) {
+            // Busca el producto que se está intentando eliminar
+            const productToUpdate = products.find(p => p.id === productId);
+            
+            if (productToUpdate) {
+              // Prepara los datos para marcar el producto como no disponible (soft delete)
+              const updateData = {
+                name: productToUpdate.name,
+                description: productToUpdate.description,
+                price: productToUpdate.price.toString(),
+                stock: 0, // Establece el stock a 0
+                images: productToUpdate.image ? [productToUpdate.image] : [],
+                categoryId: parseInt(productToUpdate.category.id),
+                isAvailable: false, // Marca como no disponible
+                metadata: {
+                  featured: false,
+                  deleted: true // Agrega un indicador de eliminado
+                }
+              };
+              
+              console.log('Realizando soft delete con datos:', updateData);
+              
+              // Actualiza el producto en lugar de eliminarlo
+              await productApi.updateProduct(productId, updateData as any);
+              
+              // Actualiza el estado local
+              setProducts(products.map(product => 
+                product.id === productId 
+                  ? {...product, status: 'inactive', stock: 0} 
+                  : product
+              ));
+              
+              setSnackbar({ 
+                open: true, 
+                message: 'Producto marcado como eliminado (no disponible)', 
+                severity: 'success' 
+              });
+            } else {
+              throw new Error('Producto no encontrado en la lista local');
+            }
+          } else {
+            // Si no es un error 404, propaga el error original
+            throw deleteError;
+          }
+        }
       } catch (error) {
-        console.error('Error deleting product:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        setSnackbar({ open: true, message: 'Error eliminando producto: ' + errorMessage, severity: 'error' });
+        console.error('Error eliminando producto:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        setSnackbar({ 
+          open: true, 
+          message: 'Error eliminando producto: ' + errorMessage, 
+          severity: 'error' 
+        });
       }
     }
   };
@@ -308,8 +433,20 @@ const AdminProducts: React.FC = () => {
     setOpenDialog(true);
   };
 
-  const getStatusColor = (status: string) => {
-    return status === 'active' ? 'success' : 'error';
+  const getStatusColor = (product: Product) => {
+    // Si es un producto "eliminado" (soft deleted)
+    if (isProductDeleted(product)) {
+      return 'error';
+    }
+    return product.status === 'active' ? 'success' : 'warning';
+  };
+
+  const getStatusLabel = (product: Product) => {
+    // Si es un producto "eliminado" (soft deleted)
+    if (isProductDeleted(product)) {
+      return 'Eliminado';
+    }
+    return product.status === 'active' ? 'Activo' : 'Inactivo';
   };
 
   const getStockColor = (stock: number) => {
@@ -369,6 +506,17 @@ const AdminProducts: React.FC = () => {
           </FormControl>
           
           <Button
+            variant={showDeleted ? "contained" : "outlined"}
+            color={showDeleted ? "secondary" : "primary"}
+            size="small"
+            startIcon={showDeleted ? <VisibilityOff /> : <Visibility />}
+            onClick={() => setShowDeleted(!showDeleted)}
+            sx={{ minWidth: 180 }}
+          >
+            {showDeleted ? "Ocultar eliminados" : "Mostrar eliminados"}
+          </Button>
+          
+          <Button
             variant="contained"
             startIcon={<Add />}
             onClick={handleAddProduct}
@@ -409,8 +557,19 @@ const AdminProducts: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <Box>
-                        <Typography variant="subtitle2" fontWeight="medium">
+                        <Typography variant="subtitle2" fontWeight="medium" sx={{
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}>
                           {product.name}
+                          {isProductDeleted(product) && (
+                            <Chip 
+                              label="ELIMINADO" 
+                              size="small" 
+                              color="error" 
+                              sx={{ ml: 1, fontSize: '0.7rem' }}
+                            />
+                          )}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" noWrap>
                           {product.description}
@@ -438,26 +597,43 @@ const AdminProducts: React.FC = () => {
                     </TableCell>
                     <TableCell align="center">
                       <Chip
-                        label={product.status === 'active' ? 'Activo' : 'Inactivo'}
+                        label={getStatusLabel(product)}
                         size="small"
-                        color={getStatusColor(product.status)}
+                        color={getStatusColor(product)}
                       />
                     </TableCell>
                     <TableCell align="center">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleEditProduct(product)}
-                        color="primary"
-                      >
-                        <Edit />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteProduct(product.id)}
-                        color="error"
-                      >
-                        <Delete />
-                      </IconButton>
+                      {isProductDeleted(product) ? (
+                        // Para productos eliminados, mostrar botón de restaurar
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRestoreProduct(product.id)}
+                          color="success"
+                          title="Restaurar producto"
+                        >
+                          <Restore />
+                        </IconButton>
+                      ) : (
+                        // Para productos normales, mostrar editar/eliminar
+                        <>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleEditProduct(product)}
+                            color="primary"
+                            title="Editar producto"
+                          >
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDeleteProduct(product.id)}
+                            color="error"
+                            title="Eliminar producto"
+                          >
+                            <Delete />
+                          </IconButton>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

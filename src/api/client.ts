@@ -26,10 +26,45 @@ export async function apiRequest<T>(
   };
 
   try {
+    // Registra información sobre la solicitud para ayudar en la depuración
+    console.log(`Realizando solicitud ${options.method || 'GET'} a: ${url}`);
+    
     const response = await fetch(url, config);
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Intenta obtener un mensaje de error más detallado del servidor
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      let errorDetails = null;
+      
+      try {
+        const errorBody = await response.clone().json();
+        errorDetails = errorBody;
+        
+        if (errorBody.message) {
+          errorMessage = `${errorMessage} - ${errorBody.message}`;
+        } else if (errorBody.error) {
+          errorMessage = `${errorMessage} - ${errorBody.error}`;
+        }
+        
+        console.log('Respuesta de error del servidor:', errorBody);
+      } catch (jsonError) {
+        console.log('No se pudo parsear la respuesta de error como JSON', jsonError);
+        
+        // Si no es JSON, intenta obtener el texto del error
+        try {
+          const errorText = await response.clone().text();
+          errorDetails = errorText;
+          console.log('Texto de respuesta de error:', errorText);
+        } catch (textError) {
+          console.log('No se pudo obtener el texto de error', textError);
+        }
+      }
+      
+      const enhancedError = new Error(errorMessage);
+      (enhancedError as any).status = response.status;
+      (enhancedError as any).details = errorDetails;
+      (enhancedError as any).url = url;
+      throw enhancedError;
     }
     
     const jsonResponse = await response.json();
@@ -43,6 +78,7 @@ export async function apiRequest<T>(
     return jsonResponse;
   } catch (error) {
     console.error('API request failed:', error);
+    console.error('Request details:', { url, method: config.method });
     throw error;
   }
 }
