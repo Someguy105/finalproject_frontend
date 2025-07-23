@@ -15,6 +15,15 @@ export interface Category {
   id: string;
   name: string;
   description: string;
+  slug?: string;
+  image?: string;
+  isActive: boolean;
+  sortOrder: number;
+  metadata?: {
+    color?: string;
+    icon?: string;
+    featured?: boolean;
+  };
   createdAt: string;
   updatedAt: string;
 }

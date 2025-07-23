@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -25,7 +25,8 @@ import {
   Select,
   MenuItem,
   Alert,
-  Snackbar
+  Snackbar,
+  CircularProgress
 } from '@mui/material';
 import {
   Search,
@@ -36,58 +37,41 @@ import {
   MoreVert
 } from '@mui/icons-material';
 import { t } from '../../utils';
-
-interface User {
-  id: number;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: 'admin' | 'customer';
-  status: 'active' | 'inactive';
-  createdAt: string;
-  lastLogin?: string;
-}
+import { userApi } from '../../api/users';
+import { User } from '../../types';
 
 const AdminUsers: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 1,
-      firstName: 'Juan',
-      lastName: 'Pérez',
-      email: 'juan.perez@email.com',
-      role: 'customer',
-      status: 'active',
-      createdAt: '2024-01-15',
-      lastLogin: '2024-01-20'
-    },
-    {
-      id: 2,
-      firstName: 'María',
-      lastName: 'García',
-      email: 'maria.garcia@email.com',
-      role: 'admin',
-      status: 'active',
-      createdAt: '2024-01-10',
-      lastLogin: '2024-01-21'
-    },
-    {
-      id: 3,
-      firstName: 'Carlos',
-      lastName: 'López',
-      email: 'carlos.lopez@email.com',
-      role: 'customer',
-      status: 'inactive',
-      createdAt: '2024-01-05',
-      lastLogin: '2024-01-18'
-    }
-  ]);
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [tempPassword, setTempPassword] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+
+  // Load users from backend
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        const response = await userApi.getAdminUsers();
+        setUsers(response.data);
+      } catch (error) {
+        console.error('Error loading users:', error);
+        setSnackbar({ 
+          open: true, 
+          message: 'Error cargando usuarios', 
+          severity: 'error' 
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
 
   const filteredUsers = users.filter(user =>
     user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,42 +93,77 @@ const AdminUsers: React.FC = () => {
     setOpenDialog(true);
   };
 
-  const handleDeleteUser = (userId: number) => {
-    if (window.confirm(t('confirmDelete'))) {
-      setUsers(users.filter(user => user.id !== userId));
-      setSnackbar({ open: true, message: t('itemDeleted'), severity: 'success' });
+  const handleDeleteUser = async (userId: string) => {
+    if (window.confirm('¿Está seguro de que desea eliminar este usuario?')) {
+      try {
+        await userApi.deleteUser(userId);
+        setUsers(users.filter(user => user.id !== userId));
+        setSnackbar({ open: true, message: 'Usuario eliminado', severity: 'success' });
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        setSnackbar({ open: true, message: 'Error eliminando usuario', severity: 'error' });
+      }
     }
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (selectedUser) {
-      if (selectedUser.id) {
-        // Update existing user
-        setUsers(users.map(user => 
-          user.id === selectedUser.id ? selectedUser : user
-        ));
-        setSnackbar({ open: true, message: t('itemUpdated'), severity: 'success' });
-      } else {
-        // Create new user
-        const newUser = { ...selectedUser, id: Math.max(...users.map(u => u.id)) + 1 };
-        setUsers([...users, newUser]);
-        setSnackbar({ open: true, message: t('itemCreated'), severity: 'success' });
+      try {
+        if (selectedUser.id && selectedUser.id !== 'new') {
+          // Update existing user
+          const updatedUser = await userApi.updateUser(selectedUser.id, {
+            firstName: selectedUser.firstName,
+            lastName: selectedUser.lastName,
+            email: selectedUser.email,
+            role: selectedUser.role,
+            isActive: selectedUser.isActive
+          });
+          setUsers(users.map(user => 
+            user.id === selectedUser.id ? updatedUser : user
+          ));
+          setSnackbar({ open: true, message: 'Usuario actualizado', severity: 'success' });
+        } else {
+          // Create new user - validate password
+          if (!tempPassword.trim()) {
+            setSnackbar({ open: true, message: 'La contraseña es requerida para nuevos usuarios', severity: 'error' });
+            return;
+          }
+          
+          const createData = {
+            firstName: selectedUser.firstName,
+            lastName: selectedUser.lastName,
+            email: selectedUser.email,
+            password: tempPassword,
+            role: selectedUser.role,
+            isActive: selectedUser.isActive
+          };
+          
+          const newUser = await userApi.createUser(createData as any);
+          setUsers([...users, newUser]);
+          setSnackbar({ open: true, message: 'Usuario creado', severity: 'success' });
+        }
+      } catch (error) {
+        console.error('Error saving user:', error);
+        setSnackbar({ open: true, message: 'Error guardando usuario', severity: 'error' });
       }
     }
     setOpenDialog(false);
     setSelectedUser(null);
+    setTempPassword('');
   };
 
   const handleAddUser = () => {
     setSelectedUser({
-      id: 0,
+      id: 'new',
       firstName: '',
       lastName: '',
       email: '',
       role: 'customer',
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0]
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     });
+    setTempPassword('');
     setOpenDialog(true);
   };
 
@@ -152,22 +171,30 @@ const AdminUsers: React.FC = () => {
     return role === 'admin' ? 'secondary' : 'default';
   };
 
-  const getStatusColor = (status: string) => {
-    return status === 'active' ? 'success' : 'error';
+  const getStatusColor = (isActive: boolean) => {
+    return isActive ? 'success' : 'error';
   };
+
+  if (loading) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography variant="h3" component="h1" fontWeight="bold" color="primary">
-          {t('manageUsers')}
+          Gestión de Usuarios
         </Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
           onClick={handleAddUser}
         >
-          {t('addUser')}
+          Agregar Usuario
         </Button>
       </Box>
 
@@ -192,13 +219,13 @@ const AdminUsers: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>ID</TableCell>
-              <TableCell>{t('name')}</TableCell>
-              <TableCell>{t('userEmail')}</TableCell>
-              <TableCell>{t('role')}</TableCell>
-              <TableCell>{t('userStatus')}</TableCell>
+              <TableCell>Nombre</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Rol</TableCell>
+              <TableCell>Estado</TableCell>
               <TableCell>Fecha Creación</TableCell>
-              <TableCell>Último Acceso</TableCell>
-              <TableCell>{t('actions')}</TableCell>
+              <TableCell>Última Actualización</TableCell>
+              <TableCell>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -218,13 +245,13 @@ const AdminUsers: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={user.status === 'active' ? t('active') : t('inactive')}
-                      color={getStatusColor(user.status) as any}
+                      label={user.isActive ? 'Activo' : 'Inactivo'}
+                      color={getStatusColor(user.isActive) as any}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>{user.createdAt}</TableCell>
-                  <TableCell>{user.lastLogin || 'Nunca'}</TableCell>
+                  <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(user.updatedAt).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <IconButton onClick={() => handleEditUser(user)} size="small">
                       <Edit />
@@ -251,54 +278,68 @@ const AdminUsers: React.FC = () => {
       {/* Edit/Add User Dialog */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {selectedUser?.id ? t('editUser') : t('addUser')}
+          {selectedUser?.id && selectedUser.id !== 'new' ? 'Editar Usuario' : 'Agregar Usuario'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <TextField
-              label={t('firstName')}
+              label="Nombre"
               value={selectedUser?.firstName || ''}
               onChange={(e) => setSelectedUser(prev => prev ? { ...prev, firstName: e.target.value } : null)}
               fullWidth
             />
             <TextField
-              label={t('lastName')}
+              label="Apellido"
               value={selectedUser?.lastName || ''}
               onChange={(e) => setSelectedUser(prev => prev ? { ...prev, lastName: e.target.value } : null)}
               fullWidth
             />
             <TextField
-              label={t('userEmail')}
+              label="Email"
               type="email"
               value={selectedUser?.email || ''}
               onChange={(e) => setSelectedUser(prev => prev ? { ...prev, email: e.target.value } : null)}
               fullWidth
             />
+            {selectedUser?.id === 'new' && (
+              <TextField
+                label="Contraseña"
+                type="password"
+                value={tempPassword}
+                onChange={(e) => setTempPassword(e.target.value)}
+                fullWidth
+                required
+                helperText="Requerido para nuevos usuarios"
+              />
+            )}
             <FormControl fullWidth>
-              <InputLabel>{t('userRole')}</InputLabel>
+              <InputLabel>Rol</InputLabel>
               <Select
                 value={selectedUser?.role || 'customer'}
                 onChange={(e) => setSelectedUser(prev => prev ? { ...prev, role: e.target.value as 'admin' | 'customer' } : null)}
               >
-                <MenuItem value="customer">Customer</MenuItem>
-                <MenuItem value="admin">Administrator</MenuItem>
+                <MenuItem value="customer">Cliente</MenuItem>
+                <MenuItem value="admin">Administrador</MenuItem>
               </Select>
             </FormControl>
             <FormControl fullWidth>
-              <InputLabel>{t('userStatus')}</InputLabel>
+              <InputLabel>Estado</InputLabel>
               <Select
-                value={selectedUser?.status || 'active'}
-                onChange={(e) => setSelectedUser(prev => prev ? { ...prev, status: e.target.value as 'active' | 'inactive' } : null)}
+                value={selectedUser?.isActive ? 'active' : 'inactive'}
+                onChange={(e) => setSelectedUser(prev => prev ? { ...prev, isActive: e.target.value === 'active' } : null)}
               >
-                <MenuItem value="active">{t('active')}</MenuItem>
-                <MenuItem value="inactive">{t('inactive')}</MenuItem>
+                <MenuItem value="active">Activo</MenuItem>
+                <MenuItem value="inactive">Inactivo</MenuItem>
               </Select>
             </FormControl>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>{t('cancel')}</Button>
-          <Button onClick={handleSaveUser} variant="contained">{t('save')}</Button>
+          <Button onClick={() => {
+            setOpenDialog(false);
+            setTempPassword('');
+          }}>Cancelar</Button>
+          <Button onClick={handleSaveUser} variant="contained">Guardar</Button>
         </DialogActions>
       </Dialog>
 

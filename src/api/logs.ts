@@ -12,8 +12,10 @@ export enum LogCategory {
   API_REQUEST = 'api_request',
   ERROR = 'error',
   AUTHENTICATION = 'authentication',
+  USER_ACTION = 'user_action',
   DATABASE = 'database',
   SYSTEM = 'system',
+  PAYMENT = 'payment',
 }
 
 export interface Log {
@@ -67,16 +69,16 @@ export const logApi = {
 
   // Create new log (admin only)
   createLog: (logData: Omit<Log, 'id' | 'createdAt' | 'updatedAt'>): Promise<Log> => {
-    return post<Log>('/admin/logs', logData);
+    return post<Log>('/logs', logData);
   },
 
   // Update log (admin only)
   updateLog: (id: string, logData: Partial<Log>): Promise<Log> => {
-    return put<Log>(`/admin/logs/${id}`, logData);
+    return put<Log>(`/logs/${id}`, logData);
   },
 
   // Delete log (admin only)
   deleteLog: (id: string): Promise<boolean> => {
-    return del<boolean>(`/admin/logs/${id}`);
+    return del<boolean>(`/logs/${id}`);
   },
 };

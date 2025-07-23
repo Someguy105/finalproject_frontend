@@ -57,6 +57,11 @@ export const useProducts = (params?: {
             id: String(backendProduct.categoryId),
             name: 'Unknown',
             description: '',
+            slug: '',
+            image: '',
+            isActive: true,
+            sortOrder: 999,
+            metadata: {},
             createdAt: '',
             updatedAt: ''
           },
@@ -109,6 +114,11 @@ export const useProducts = (params?: {
           id: String(backendProduct.categoryId),
           name: 'Unknown',
           description: '',
+          slug: '',
+          image: '',
+          isActive: true,
+          sortOrder: 999,
+          metadata: {},
           createdAt: '',
           updatedAt: ''
         },

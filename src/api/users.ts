@@ -19,12 +19,12 @@ export const userApi = {
 
   // Update user (admin only)
   updateUser: (id: string, userData: Partial<User>): Promise<User> => {
-    return put<User>(`/admin/users/${id}`, userData);
+    return put<User>(`/users/${id}`, userData);
   },
 
   // Delete user (admin only)
   deleteUser: (id: string): Promise<boolean> => {
-    return del<boolean>(`/admin/users/${id}`);
+    return del<boolean>(`/users/${id}`);
   },
 
   // Admin protected routes

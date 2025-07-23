@@ -29,12 +29,12 @@ export const reviewApi = {
 
   // Update review (admin only)
   updateReview: (id: string, reviewData: Partial<Review>): Promise<Review> => {
-    return put<Review>(`/admin/reviews/${id}`, reviewData);
+    return put<Review>(`/reviews/${id}`, reviewData);
   },
 
   // Delete review (admin only)
   deleteReview: (id: string): Promise<boolean> => {
-    return del<boolean>(`/admin/reviews/${id}`);
+    return del<boolean>(`/reviews/${id}`);
   },
 
   // Mark review as helpful

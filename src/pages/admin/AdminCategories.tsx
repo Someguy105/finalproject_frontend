@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -14,111 +14,79 @@ import {
   IconButton,
   Button,
   TextField,
-  InputAdornment,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Alert,
   Snackbar,
+  CircularProgress,
   Avatar,
-  Card,
-  CardContent,
-  CardActions
+  Chip,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import {
-  Search,
   Edit,
   Delete,
   Add,
-  Category as CategoryIcon
+  Category as CategoryIcon,
+  Visibility,
+  VisibilityOff,
+  Image as ImageIcon,
+  Sort
 } from '@mui/icons-material';
-import { t } from '../../utils';
-
-interface Category {
-  id: number;
-  name: string;
-  description: string;
-  slug: string;
-  image?: string;
-  productCount: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+import { categoryApi } from '../../api/products';
+import { Category } from '../../types';
 
 const AdminCategories: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([
-    {
-      id: 1,
-      name: 'Electronics',
-      description: 'Electronic devices, gadgets, and accessories',
-      slug: 'electronics',
-      image: 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500',
-      productCount: 2,
-      isActive: true,
-      createdAt: '2025-01-15',
-      updatedAt: '2025-01-20'
-    },
-    {
-      id: 2,
-      name: 'Clothing',
-      description: 'Fashion apparel and accessories for all ages',
-      slug: 'clothing',
-      image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=500',
-      productCount: 1,
-      isActive: true,
-      createdAt: '2025-01-16',
-      updatedAt: '2025-01-19'
-    },
-    {
-      id: 3,
-      name: 'Books',
-      description: 'Physical and digital books, magazines, and educational materials',
-      slug: 'books',
-      image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=500',
-      productCount: 1,
-      isActive: true,
-      createdAt: '2025-01-17',
-      updatedAt: '2025-01-18'
-    },
-    {
-      id: 4,
-      name: 'Home & Garden',
-      description: 'Home improvement, furniture, and gardening supplies',
-      slug: 'home-garden',
-      image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=500',
-      productCount: 0,
-      isActive: true,
-      createdAt: '2025-01-18',
-      updatedAt: '2025-01-21'
-    }
-  ]);
-
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [searchTerm, setSearchTerm] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
-
-  // Form state
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    slug: '',
-    image: '',
-    isActive: true
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{ open: boolean; categoryId: string | null }>({
+    open: false,
+    categoryId: null
   });
 
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    category.slug.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Load data from backend
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setLoading(true);
+        const categoriesData = await categoryApi.getCategories();
+        
+        const mappedCategories = categoriesData.map(category => ({
+          id: category.id,
+          name: category.name,
+          description: category.description,
+          slug: category.slug || '',
+          image: category.image || '',
+          isActive: category.isActive ?? true,
+          sortOrder: category.sortOrder || 0,
+          metadata: category.metadata || {},
+          createdAt: new Date(category.createdAt).toISOString().split('T')[0],
+          updatedAt: new Date(category.updatedAt || category.createdAt).toISOString().split('T')[0]
+        }));
+
+        setCategories(mappedCategories);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        setSnackbar({ 
+          open: true, 
+          message: 'Error loading categories from server', 
+          severity: 'error' 
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -129,410 +97,394 @@ const AdminCategories: React.FC = () => {
     setPage(0);
   };
 
-  const handleAddCategory = () => {
-    setEditingCategory(null);
-    setFormData({ name: '', description: '', slug: '', image: '', isActive: true });
+  const handleEditCategory = (category: Category) => {
+    setSelectedCategory(category);
     setOpenDialog(true);
   };
 
-  const handleEditCategory = (category: Category) => {
-    setEditingCategory(category);
-    setFormData({
-      name: category.name,
-      description: category.description,
-      slug: category.slug,
-      image: category.image || '',
-      isActive: category.isActive
+  const handleDeleteCategory = (categoryId: string) => {
+    setDeleteConfirmDialog({ open: true, categoryId });
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!deleteConfirmDialog.categoryId) return;
+
+    try {
+      await categoryApi.deleteCategory(deleteConfirmDialog.categoryId);
+      setCategories(categories.filter(category => category.id !== deleteConfirmDialog.categoryId));
+      setSnackbar({ open: true, message: 'Categoría eliminada exitosamente', severity: 'success' });
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      setSnackbar({ open: true, message: 'Error eliminando categoría', severity: 'error' });
+    }
+    
+    setDeleteConfirmDialog({ open: false, categoryId: null });
+  };
+
+  const handleSaveCategory = async () => {
+    if (!selectedCategory) return;
+
+    try {
+      if (selectedCategory.id === 'new') {
+        // Create new category
+        const newCategoryData = {
+          name: selectedCategory.name,
+          description: selectedCategory.description,
+          slug: selectedCategory.slug || selectedCategory.name.toLowerCase().replace(/\s+/g, '-'),
+          image: selectedCategory.image || '',
+          isActive: selectedCategory.isActive ?? true,
+          sortOrder: selectedCategory.sortOrder || categories.length + 1,
+          metadata: selectedCategory.metadata || {}
+        };
+        
+        const createdCategory = await categoryApi.createCategory(newCategoryData);
+        const mappedCategory = {
+          id: createdCategory.id,
+          name: createdCategory.name,
+          description: createdCategory.description,
+          slug: createdCategory.slug || '',
+          image: createdCategory.image || '',
+          isActive: createdCategory.isActive ?? true,
+          sortOrder: createdCategory.sortOrder || 0,
+          metadata: createdCategory.metadata || {},
+          createdAt: new Date(createdCategory.createdAt).toISOString().split('T')[0],
+          updatedAt: new Date(createdCategory.updatedAt || createdCategory.createdAt).toISOString().split('T')[0]
+        };
+        
+        setCategories([...categories, mappedCategory]);
+        setSnackbar({ open: true, message: 'Categoría creada exitosamente', severity: 'success' });
+      } else {
+        // Update existing category
+        const updateData = {
+          name: selectedCategory.name,
+          description: selectedCategory.description,
+          slug: selectedCategory.slug || selectedCategory.name.toLowerCase().replace(/\s+/g, '-'),
+          image: selectedCategory.image || '',
+          isActive: selectedCategory.isActive ?? true,
+          sortOrder: selectedCategory.sortOrder || 0,
+          metadata: selectedCategory.metadata || {}
+        };
+        
+        const updatedCategory = await categoryApi.updateCategory(selectedCategory.id, updateData);
+        const mappedCategory = {
+          id: updatedCategory.id,
+          name: updatedCategory.name,
+          description: updatedCategory.description,
+          slug: updatedCategory.slug || '',
+          image: updatedCategory.image || '',
+          isActive: updatedCategory.isActive ?? true,
+          sortOrder: updatedCategory.sortOrder || 0,
+          metadata: updatedCategory.metadata || {},
+          createdAt: new Date(updatedCategory.createdAt).toISOString().split('T')[0],
+          updatedAt: new Date(updatedCategory.updatedAt || updatedCategory.createdAt).toISOString().split('T')[0]
+        };
+        
+        setCategories(categories.map(category => 
+          category.id === selectedCategory.id ? mappedCategory : category
+        ));
+        setSnackbar({ open: true, message: 'Categoría actualizada exitosamente', severity: 'success' });
+      }
+    } catch (error) {
+      console.error('Error saving category:', error);
+      setSnackbar({ open: true, message: 'Error guardando categoría', severity: 'error' });
+    }
+    
+    setOpenDialog(false);
+    setSelectedCategory(null);
+  };
+
+  const handleAddCategory = () => {
+    setSelectedCategory({
+      id: 'new',
+      name: '',
+      description: '',
+      slug: '',
+      image: '',
+      isActive: true,
+      sortOrder: categories.length + 1,
+      metadata: {},
+      createdAt: '',
+      updatedAt: ''
     });
     setOpenDialog(true);
   };
 
-  const handleDeleteCategory = (categoryId: number) => {
-    const categoryToDelete = categories.find(c => c.id === categoryId);
-    if (categoryToDelete) {
-      setCategoryToDelete(categoryToDelete);
-      setOpenDeleteDialog(true);
-    }
-  };
-
-  const confirmDeleteCategory = () => {
-    if (categoryToDelete) {
-      setCategories(categories.filter(category => category.id !== categoryToDelete.id));
-      setSnackbar({ 
-        open: true, 
-        message: `Categoría "${categoryToDelete.name}" eliminada exitosamente`, 
-        severity: 'success' 
-      });
-    }
-    setOpenDeleteDialog(false);
-    setCategoryToDelete(null);
-  };
-
-  const cancelDeleteCategory = () => {
-    setOpenDeleteDialog(false);
-    setCategoryToDelete(null);
-  };
-
-  const handleSaveCategory = () => {
-    if (!formData.name.trim() || !formData.description.trim()) {
-      setSnackbar({ open: true, message: 'Nombre y descripción son obligatorios', severity: 'error' });
-      return;
-    }
-
-    // Generate slug if not provided
-    const slug = formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
-    if (editingCategory) {
-      // Update existing category
-      setCategories(categories.map(category =>
-        category.id === editingCategory.id
-          ? {
-              ...category,
-              name: formData.name,
-              description: formData.description,
-              slug: slug,
-              image: formData.image,
-              isActive: formData.isActive,
-              updatedAt: new Date().toISOString().split('T')[0]
-            }
-          : category
-      ));
-      setSnackbar({ open: true, message: 'Categoría actualizada exitosamente', severity: 'success' });
-    } else {
-      // Add new category
-      const newCategory: Category = {
-        id: Math.max(...categories.map(c => c.id)) + 1,
-        name: formData.name,
-        description: formData.description,
-        slug: slug,
-        image: formData.image,
-        productCount: 0,
-        isActive: formData.isActive,
-        createdAt: new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0]
-      };
-      setCategories([...categories, newCategory]);
-      setSnackbar({ open: true, message: 'Categoría creada exitosamente', severity: 'success' });
-    }
-
-    setOpenDialog(false);
-  };
-
-  const toggleCategoryStatus = (categoryId: number) => {
-    setCategories(categories.map(category =>
-      category.id === categoryId
-        ? { ...category, isActive: !category.isActive, updatedAt: new Date().toISOString().split('T')[0] }
-        : category
-    ));
-    setSnackbar({ open: true, message: 'Estado de categoría actualizado', severity: 'success' });
-  };
-
-  const renderTableView = () => (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>ID</TableCell>
-            <TableCell>Imagen</TableCell>
-            <TableCell>{t('categoryName')}</TableCell>
-            <TableCell>{t('description')}</TableCell>
-            <TableCell>Slug</TableCell>
-            <TableCell>Productos</TableCell>
-            <TableCell>Estado</TableCell>
-            <TableCell>{t('actions')}</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredCategories
-            .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-            .map((category) => (
-              <TableRow key={category.id}>
-                <TableCell>{category.id}</TableCell>
-                <TableCell>
-                  <Avatar
-                    src={category.image}
-                    sx={{ width: 40, height: 40 }}
-                  >
-                    <CategoryIcon />
-                  </Avatar>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" fontWeight="medium">
-                    {category.name}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
-                    {category.description}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2" color="text.secondary">
-                    {category.slug}
-                  </Typography>
-                </TableCell>
-                <TableCell>{category.productCount}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    color={category.isActive ? 'success' : 'error'}
-                    onClick={() => toggleCategoryStatus(category.id)}
-                  >
-                    {category.isActive ? 'Activa' : 'Inactiva'}
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton onClick={() => handleEditCategory(category)} size="small" title="Editar categoría">
-                      <Edit />
-                    </IconButton>
-                    <IconButton 
-                      onClick={() => handleDeleteCategory(category.id)} 
-                      size="small" 
-                      color="error"
-                      title="Eliminar categoría"
-                    >
-                      <Delete />
-                    </IconButton>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-        </TableBody>
-      </Table>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={filteredCategories.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
-    </TableContainer>
-  );
-
-  const renderCardView = () => (
-    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 3 }}>
-      {filteredCategories
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-        .map((category) => (
-          <Card key={category.id}>
-            <Box sx={{ position: 'relative' }}>
-              {category.image ? (
-                <img
-                  src={category.image}
-                  alt={category.name}
-                  style={{ width: '100%', height: 200, objectFit: 'cover' }}
-                />
-              ) : (
-                <Box
-                  sx={{
-                    height: 200,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    bgcolor: 'grey.200'
-                  }}
-                >
-                  <CategoryIcon sx={{ fontSize: 60, color: 'grey.400' }} />
-                </Box>
-              )}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  bgcolor: category.isActive ? 'success.main' : 'error.main',
-                  color: 'white',
-                  px: 1,
-                  py: 0.5,
-                  borderRadius: 1,
-                  fontSize: '0.75rem'
-                }}
-              >
-                {category.isActive ? 'Activa' : 'Inactiva'}
-              </Box>
-            </Box>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                {category.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {category.description}
-              </Typography>
-              <Typography variant="caption" display="block" gutterBottom>
-                Slug: {category.slug}
-              </Typography>
-              <Typography variant="caption" color="primary">
-                {category.productCount} productos
-              </Typography>
-            </CardContent>
-            <CardActions>
-              <Button size="small" onClick={() => handleEditCategory(category)}>
-                <Edit sx={{ mr: 1 }} /> Editar
-              </Button>
-              <Button 
-                size="small" 
-                color="error" 
-                onClick={() => handleDeleteCategory(category.id)}
-              >
-                <Delete sx={{ mr: 1 }} /> Eliminar
-              </Button>
-            </CardActions>
-          </Card>
-        ))}
-    </Box>
-  );
+  if (loading) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Typography variant="h3" component="h1" gutterBottom fontWeight="bold" color="primary">
-        {t('manageCategories')}
-      </Typography>
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-          <TextField
-            placeholder={t('searchPlaceholder')}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            sx={{ flexGrow: 1 }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-            }}
-          />
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Categorías
+        </Typography>
+        
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={handleAddCategory}
           >
-            {t('addCategory')}
+            Agregar Categoría
           </Button>
         </Box>
+      </Box>
+
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Categoría</TableCell>
+                <TableCell>Descripción</TableCell>
+                <TableCell align="center">Estado</TableCell>
+                <TableCell align="center">Orden</TableCell>
+                <TableCell align="center">Fecha de Creación</TableCell>
+                <TableCell align="center">Acciones</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {categories
+                .sort((a, b) => a.sortOrder - b.sortOrder)
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((category) => (
+                  <TableRow key={category.id} hover>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        {category.image ? (
+                          <Avatar
+                            src={category.image}
+                            sx={{ width: 40, height: 40 }}
+                          >
+                            <ImageIcon />
+                          </Avatar>
+                        ) : (
+                          <Avatar
+                            sx={{ 
+                              width: 40, 
+                              height: 40, 
+                              bgcolor: category.metadata?.color || 'primary.main' 
+                            }}
+                          >
+                            <CategoryIcon />
+                          </Avatar>
+                        )}
+                        <Box>
+                          <Typography variant="subtitle2" fontWeight="medium">
+                            {category.name}
+                          </Typography>
+                          {category.metadata?.featured && (
+                            <Chip 
+                              label="Destacada" 
+                              size="small" 
+                              color="secondary" 
+                              sx={{ mt: 0.5 }}
+                            />
+                          )}
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {category.description}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={category.isActive ? 'Activa' : 'Inactiva'}
+                        color={category.isActive ? 'success' : 'error'}
+                        size="small"
+                        icon={category.isActive ? <Visibility /> : <VisibilityOff />}
+                      />
+                    </TableCell>
+                    <TableCell align="center">
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                        <Sort fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          {category.sortOrder}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Typography variant="body2">
+                        {category.createdAt}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditCategory(category)}
+                        color="primary"
+                      >
+                        <Edit />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleDeleteCategory(category.id)}
+                        color="error"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
         
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant={viewMode === 'table' ? 'contained' : 'outlined'}
-            size="small"
-            onClick={() => setViewMode('table')}
-          >
-            Tabla
-          </Button>
-          <Button
-            variant={viewMode === 'cards' ? 'contained' : 'outlined'}
-            size="small"
-            onClick={() => setViewMode('cards')}
-          >
-            Tarjetas
-          </Button>
-        </Box>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={categories.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
       </Paper>
 
-      {viewMode === 'table' ? renderTableView() : renderCardView()}
-
-      {/* Category Form Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="md" fullWidth>
+      {/* Category Dialog */}
+      <Dialog 
+        open={openDialog} 
+        onClose={() => setOpenDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
-          {editingCategory ? 'Editar Categoría' : 'Nueva Categoría'}
+          {selectedCategory?.id === 'new' ? 'Agregar Categoría' : 'Editar Categoría'}
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <TextField
-              label="Nombre de la Categoría"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Descripción"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Slug (URL amigable)"
-              value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              fullWidth
-              placeholder="Se genera automáticamente si se deja vacío"
-            />
-            <TextField
-              label="URL de Imagen"
-              value={formData.image}
-              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-              fullWidth
-              placeholder="https://ejemplo.com/imagen.jpg"
-            />
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography>Estado:</Typography>
-              <Button
-                variant={formData.isActive ? 'contained' : 'outlined'}
-                color={formData.isActive ? 'success' : 'error'}
-                onClick={() => setFormData({ ...formData, isActive: !formData.isActive })}
-              >
-                {formData.isActive ? 'Activa' : 'Inactiva'}
-              </Button>
+        <DialogContent dividers>
+          {selectedCategory && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+              <TextField
+                label="Nombre de la Categoría"
+                fullWidth
+                value={selectedCategory.name}
+                onChange={(e) => setSelectedCategory({
+                  ...selectedCategory,
+                  name: e.target.value,
+                  slug: e.target.value.toLowerCase().replace(/\s+/g, '-')
+                })}
+              />
+              
+              <TextField
+                label="Descripción"
+                fullWidth
+                multiline
+                rows={3}
+                value={selectedCategory.description}
+                onChange={(e) => setSelectedCategory({
+                  ...selectedCategory,
+                  description: e.target.value
+                })}
+              />
+
+              <TextField
+                label="URL de la Imagen"
+                fullWidth
+                value={selectedCategory.image || ''}
+                onChange={(e) => setSelectedCategory({
+                  ...selectedCategory,
+                  image: e.target.value
+                })}
+                placeholder="https://ejemplo.com/imagen.jpg"
+              />
+
+              <TextField
+                label="Orden de Clasificación"
+                type="number"
+                fullWidth
+                value={selectedCategory.sortOrder}
+                onChange={(e) => setSelectedCategory({
+                  ...selectedCategory,
+                  sortOrder: parseInt(e.target.value) || 0
+                })}
+              />
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={selectedCategory.isActive}
+                    onChange={(e) => setSelectedCategory({
+                      ...selectedCategory,
+                      isActive: e.target.checked
+                    })}
+                  />
+                }
+                label="Categoría Activa"
+              />
+
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={selectedCategory.metadata?.featured || false}
+                    onChange={(e) => setSelectedCategory({
+                      ...selectedCategory,
+                      metadata: {
+                        ...selectedCategory.metadata,
+                        featured: e.target.checked
+                      }
+                    })}
+                  />
+                }
+                label="Categoría Destacada"
+              />
+
+              <TextField
+                label="Color de la Categoría"
+                fullWidth
+                value={selectedCategory.metadata?.color || ''}
+                onChange={(e) => setSelectedCategory({
+                  ...selectedCategory,
+                  metadata: {
+                    ...selectedCategory.metadata,
+                    color: e.target.value
+                  }
+                })}
+                placeholder="#1976d2"
+              />
             </Box>
-          </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-          <Button onClick={handleSaveCategory} variant="contained">
-            {editingCategory ? 'Actualizar' : 'Crear'}
+          <Button onClick={() => setOpenDialog(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSaveCategory}
+            variant="contained"
+            disabled={!selectedCategory?.name || !selectedCategory?.description}
+          >
+            Guardar
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog 
-        open={openDeleteDialog} 
-        onClose={cancelDeleteCategory}
+      <Dialog
+        open={deleteConfirmDialog.open}
+        onClose={() => setDeleteConfirmDialog({ open: false, categoryId: null })}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>
-          Confirmar Eliminación
-        </DialogTitle>
+        <DialogTitle>Confirmar Eliminación</DialogTitle>
         <DialogContent>
-          {categoryToDelete && (
-            <Box>
-              <Typography gutterBottom>
-                ¿Está seguro de que desea eliminar la categoría <strong>"{categoryToDelete.name}"</strong>?
-              </Typography>
-              {categoryToDelete.productCount > 0 && (
-                <Alert severity="warning" sx={{ mt: 2 }}>
-                  <Typography variant="body2">
-                    <strong>Atención:</strong> Esta categoría tiene <strong>{categoryToDelete.productCount} producto(s)</strong> asociado(s). 
-                    Al eliminarla, estos productos quedarán sin categoría asignada.
-                  </Typography>
-                </Alert>
-              )}
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Esta acción no se puede deshacer.
-              </Typography>
-            </Box>
-          )}
+          <Typography>
+            ¿Estás seguro de que deseas eliminar esta categoría? Esta acción no se puede deshacer.
+          </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={cancelDeleteCategory}>
+          <Button onClick={() => setDeleteConfirmDialog({ open: false, categoryId: null })}>
             Cancelar
           </Button>
-          <Button 
-            onClick={confirmDeleteCategory} 
-            color="error" 
-            variant="contained"
-            startIcon={<Delete />}
-          >
+          <Button onClick={confirmDeleteCategory} color="error" variant="contained">
             Eliminar
           </Button>
         </DialogActions>

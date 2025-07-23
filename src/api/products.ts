@@ -48,16 +48,16 @@ export const categoryApi = {
 
   // Create new category (admin only) - Backend wraps data in ApiResponse, client extracts data property
   createCategory: (categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category> => {
-    return post<Category>('/admin/categories', categoryData);
+    return post<Category>('/categories', categoryData);
   },
 
   // Update category (admin only) - Fixed: backend returns raw data
   updateCategory: (id: string, categoryData: Partial<Category>): Promise<Category> => {
-    return put<Category>(`/admin/categories/${id}`, categoryData);
+    return put<Category>(`/categories/${id}`, categoryData);
   },
 
   // Delete category (admin only) - Fixed: backend returns boolean success
   deleteCategory: (id: string): Promise<boolean> => {
-    return del<boolean>(`/admin/categories/${id}`);
+    return del<boolean>(`/categories/${id}`);
   },
 };
