@@ -9,8 +9,9 @@ import {
   Stack,
   Alert,
   FormHelperText,
+  Divider,
 } from '@mui/material';
-import { StarOutlineOutlined } from '@mui/icons-material';
+import { StarOutlineOutlined, StarOutlined, SaveOutlined, CancelOutlined } from '@mui/icons-material';
 import { reviewApi } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { Review } from '../types';
@@ -37,19 +38,19 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
 
   const validateForm = () => {
     if (rating === 0) {
-      setError('Please select a rating');
+      setError('Por favor selecciona una calificación');
       return false;
     }
     if (title.trim().length < 3) {
-      setError('Title must be at least 3 characters long');
+      setError('El título debe tener al menos 3 caracteres');
       return false;
     }
     if (comment.trim().length < 10) {
-      setError('Review must be at least 10 characters long');
+      setError('La reseña debe tener al menos 10 caracteres');
       return false;
     }
     if (comment.trim().length > 1000) {
-      setError('Review must be less than 1000 characters');
+      setError('La reseña debe tener menos de 1000 caracteres');
       return false;
     }
     return true;
@@ -107,17 +108,19 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
 
   const ratingLabels: { [index: string]: string } = {
     1: 'Terrible',
-    2: 'Poor',
-    3: 'Average',
-    4: 'Good',
-    5: 'Excellent',
+    2: 'Deficiente',
+    3: 'Regular',
+    4: 'Bueno',
+    5: 'Excelente',
   };
 
   return (
-    <Paper elevation={2} sx={{ p: 4 }}>
-      <Typography variant="h6" gutterBottom>
-        {existingReview ? 'Edit Your Review' : 'Write Your Review'}
+    <Paper elevation={2} sx={{ p: 4, borderRadius: 2 }}>
+      <Typography variant="h6" gutterBottom fontWeight="bold" color="primary">
+        {existingReview ? 'Editar mi reseña' : 'Escribir una reseña'}
       </Typography>
+      
+      <Divider sx={{ my: 2 }} />
       
       <form onSubmit={handleSubmit}>
         <Stack spacing={3}>
@@ -129,68 +132,92 @@ const ReviewForm: React.FC<ReviewFormProps> = ({
 
           {/* Rating */}
           <Box>
-            <Typography variant="body1" gutterBottom>
-              Overall Rating *
+            <Typography variant="body1" gutterBottom fontWeight="medium">
+              Calificación general *
             </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' }, 
+              alignItems: { xs: 'flex-start', sm: 'center' }, 
+              gap: 2, 
+              mb: 1 
+            }}>
               <Rating
                 value={rating}
                 onChange={(event, newValue) => {
                   setRating(newValue || 0);
                 }}
                 size="large"
+                icon={<StarOutlined fontSize="inherit" sx={{ color: 'secondary.main' }} />}
                 emptyIcon={<StarOutlineOutlined fontSize="inherit" />}
+                sx={{ fontSize: '2rem' }}
               />
-              <Typography variant="body2" color="text.secondary">
-                {ratingLabels[rating]}
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: rating >= 4 ? 'success.main' : 
+                         rating >= 3 ? 'warning.main' : 
+                         rating > 0 ? 'error.main' : 'text.secondary',
+                  fontWeight: 'bold'
+                }}
+              >
+                {rating > 0 ? ratingLabels[rating] : 'Sin calificar'}
               </Typography>
             </Box>
             <FormHelperText>
-              Click to rate this product
+              Haz clic en las estrellas para calificar este producto
             </FormHelperText>
           </Box>
 
           {/* Review Title */}
           <TextField
-            label="Review Title"
+            label="Título de la reseña"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             fullWidth
             required
-            placeholder="Summarize your experience in a few words"
+            placeholder="Resume tu experiencia en pocas palabras"
             inputProps={{ maxLength: 100 }}
-            helperText={`${title.length}/100 characters`}
+            helperText={`${title.length}/100 caracteres`}
+            variant="outlined"
           />
 
           {/* Review Comment */}
           <TextField
-            label="Your Review"
+            label="Tu reseña"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             fullWidth
             required
             multiline
             rows={6}
-            placeholder="Tell others about your experience with this product. What did you like or dislike? How does it compare to similar products?"
+            placeholder="Cuéntale a otros sobre tu experiencia con este producto. ¿Qué te gustó o no te gustó? ¿Cómo se compara con productos similares? Sé específico y honesto en tu valoración."
             inputProps={{ maxLength: 1000 }}
-            helperText={`${comment.length}/1000 characters`}
+            helperText={`${comment.length}/1000 caracteres`}
+            variant="outlined"
           />
 
           {/* Action Buttons */}
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
             <Button
               variant="outlined"
               onClick={onCancel}
               disabled={submitting}
+              startIcon={<CancelOutlined />}
+              color="inherit"
             >
-              Cancel
+              Cancelar
             </Button>
             <Button
               type="submit"
               variant="contained"
               disabled={submitting || !rating || !title.trim() || !comment.trim()}
+              startIcon={<SaveOutlined />}
+              sx={{ px: 3 }}
             >
-              {submitting ? `${existingReview ? 'Updating' : 'Submitting'}...` : `${existingReview ? 'Update' : 'Submit'} Review`}
+              {submitting 
+                ? `${existingReview ? 'Actualizando' : 'Enviando'}...` 
+                : `${existingReview ? 'Actualizar' : 'Enviar'} reseña`}
             </Button>
           </Box>
         </Stack>

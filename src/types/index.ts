@@ -82,6 +82,7 @@ export interface Order {
   shippingAddress: ShippingAddress;
   paymentMethod: string;
   currency: string;
+  items?: OrderItem[];
   createdAt: string;
   updatedAt: string;
 }

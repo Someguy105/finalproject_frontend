@@ -1,6 +1,8 @@
 import { get, post, put, del } from './client';
 import { OrderStatus, PaymentStatus } from '../types';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://ecommerce-blog-backend.onrender.com';
+
 // Backend Order type (what we actually get from API)
 interface BackendOrder {
   id: number;
@@ -66,7 +68,15 @@ export const orderApi = {
 
   // Get orders for current customer
   getMyOrders: (): Promise<BackendOrder[]> => {
-    return get<BackendOrder[]>('/orders/my-orders');
+    // Intentar con varios endpoints comunes, en orden de prioridad
+    return get<BackendOrder[]>('/orders/me')
+      .catch(() => get<BackendOrder[]>('/orders/customer'))
+      .catch(() => get<BackendOrder[]>('/my-orders'))
+      .catch(() => get<BackendOrder[]>('/user/orders'))
+      .catch((err) => {
+        console.error("Todos los endpoints fallaron al intentar obtener pedidos del cliente:", err);
+        throw new Error("No se pudieron cargar tus pedidos. Por favor, inténtalo de nuevo más tarde.");
+      });
   },
 
   // Get single order by ID

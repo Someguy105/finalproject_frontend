@@ -32,7 +32,14 @@ export async function apiRequest<T>(
     const response = await fetch(url, config);
     
     if (!response.ok) {
-      // Intenta obtener un mensaje de error más detallado del servidor
+      // Si es un error 404 en una solicitud GET para pedidos, podríamos manejarlo de forma especial
+      if (response.status === 404 && options.method === 'GET' && 
+         (endpoint.includes('/orders/me') || endpoint.includes('/my-orders') || endpoint.includes('/orden'))) {
+        console.log(`Endpoint de pedidos no encontrado: ${endpoint}. Devolviendo array vacío.`);
+        return [] as unknown as T; // Devolver array vacío para endpoints de pedidos que no existen
+      }
+      
+      // Para otros errores, intentar obtener mensaje detallado del servidor
       let errorMessage = `HTTP error! status: ${response.status}`;
       let errorDetails = null;
       
